@@ -1,5 +1,8 @@
 import pygame as pg
 
 # Window settings
-RES = WIDTH, HEIGHT = 1024, 1024
-FPS = 0
+RES = WINDOW_WIDTH, WINDOW_HEIGHT = 1024, 800
+FPS = 60
+
+# World Size
+WORLD = WORLD_WIDTH, WORLD_HEIGHT = WINDOW_WIDTH * 5, WINDOW_HEIGHT * 5
