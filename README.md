@@ -1,6 +1,6 @@
-# PygameStarter
+# Grrate - Blob Game
 
-A simple starter for Pygame
+A simple game for the networking class to extend.
 
 
 
