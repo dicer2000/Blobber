@@ -6,11 +6,15 @@ class Camera:
         self.camera = pygame.Rect(0, 0, width, height)
         self.width = width
         self.height = height
+        self.zoom = 1  # Add this line
 
     def apply(self, entity):
         # Return adjusted x and y positions for the blob
-        return entity.x - self.camera.x, entity.y - self.camera.y
-
+        x, y = entity.x - self.camera.x, entity.y - self.camera.y
+        # Scale the coordinates and size by the zoom factor
+        x, y, size = x * self.zoom, y * self.zoom, entity.size * self.zoom  # Add this line
+        return x, y, size  # Modify this line
+    
     def update(self, target):
         # Adjust the camera position based on the player's movement vectors
         self.camera.x += target.dx

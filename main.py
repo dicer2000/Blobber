@@ -28,7 +28,7 @@ class Game:
         self.blobs.append(pb)
 
         # Randomly add 100 other blobs
-        for i in range(70):
+        for i in range(200):
             b = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, "white", 0)
             self.blobs.append(b)
         pass
@@ -80,7 +80,8 @@ class Game:
         
         # Draw all the blobs
         for blob in self.blobs[::-1]:
-            blob.draw(self.screen, self.camera)
+            if blob.x > self.camera.camera.left and blob.y > self.camera.camera.top and blob.x < self.camera.camera.right and blob.y < self.camera.camera.bottom:
+                blob.draw(self.screen, self.camera)
 
         # Drawn screen to forefront
         pygame.display.flip()
@@ -91,6 +92,12 @@ class Game:
             if event.type == pg.QUIT or (event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE):
                 pg.quit()
                 sys.exit()
+
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_MINUS:  # Decrease zoom factor (zoom out)
+                    self.camera.zoom *= 0.09
+                elif event.key == pg.K_EQUALS:  # Increase zoom factor (zoom in)
+                    self.camera.zoom *= 1.01
             # Check if the mouse has moved
             elif event.type == pygame.MOUSEMOTION:
                 mouseX, mouseY = event.pos

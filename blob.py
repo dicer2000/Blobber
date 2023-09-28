@@ -34,12 +34,11 @@ class Blob:
 
     def draw(self, screen, camera, player=False):
         # Translated position based on camera
+        tx, ty, size = camera.apply(self)
         if player:
             tx, ty = self.x, self.y
-        else:
-            tx, ty = camera.apply(self)
-
-        pygame.draw.circle(screen, self.color, (tx, ty), self.size)
+        # Draw everything
+        pygame.draw.circle(screen, self.color, (int(tx), int(ty)), int(size))  # Modify this line
 
         # Font rendering for displaying x, y, dx, and dy
         font = pygame.font.SysFont(None, 24)  # Use default font, size 24
