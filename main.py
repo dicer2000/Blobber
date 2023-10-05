@@ -7,6 +7,20 @@ from blob import *
 from camera import *
 from spacial_hash import *
 from math import hypot
+from common import clamp
+from tweener import *
+from world import world
+
+# Tween motions
+tween = Tween(begin=1.0, 
+               end=1.05,
+               duration=100,
+               easing=Easing.LINEAR,
+               easing_mode=EasingMode.IN,
+               boomerang=True,
+               loop=False,
+               reps=1)
+
 
 # Main game object
 class Game:
@@ -18,24 +32,56 @@ class Game:
         self.blobs = []
         self.camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.spatial_hash = None
+        self.zoom_factor = 0
+        self.camera_op = CAMERA_STEADY
+        self.world_bounds = world(WORLD_WIDTH, WORLD_HEIGHT)
         self.new_game()
 
     def new_game(self):
         # Create a new game
         
         # Create blobs - me first
-        pb = PlayerBlob("XOR", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 20, "Yellow", 0.5)
+        pb = PlayerBlob("XOR", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 20, (255,255,0), 0.5)
         self.blobs.append(pb)
 
-        # Randomly add 100 other blobs
+        # Randomly add food blobs
         for i in range(200):
-            b = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, "white", 0)
+            b = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, FOOD_COLOR_ARRAY[i%len(FOOD_COLOR_ARRAY)], 0)
             self.blobs.append(b)
-        pass
+
 
     def update(self):
         
         pg.display.set_caption(f'{self.clock.get_fps():.1f} fps')
+
+        # Don't let blob go out of the World
+
+        # Boundary checks for x-coordinate
+        if self.blobs[0].world_x - self.blobs[0].size < 0:  # left boundary
+            self.blobs[0].world_x = self.blobs[0].size
+            self.blobs[0].dx = 0
+        elif self.blobs[0].world_x + self.blobs[0].size > WORLD_WIDTH:  # right boundary
+            self.blobs[0].world_x = WORLD_WIDTH - self.blobs[0].size
+            self.blobs[0].dx = 0
+
+        # Boundary checks for y-coordinate
+        if self.blobs[0].world_y - self.blobs[0].size < 0:  # top boundary
+            self.blobs[0].world_y = self.blobs[0].size
+            self.blobs[0].dy = 0
+        elif self.blobs[0].world_y + self.blobs[0].size > WORLD_HEIGHT:  # bottom boundary
+            self.blobs[0].world_y = WORLD_HEIGHT - self.blobs[0].size
+            self.blobs[0].dy = 0
+
+
+        # Update the zoom level using lerp
+        if tween.animating:
+            tween.update()
+            if self.camera_op == CAMERA_ZOOMIN:
+                self.camera.zoom = tween.value
+            elif self.camera_op == CAMERA_ZOOMOUT:
+                self.camera.zoom = 1 - (tween.value - 1)
+
+
 
         # Update the main player
         self.blobs[0].update()
@@ -65,23 +111,22 @@ class Game:
             blob.dx = 0.0
             blob.dy = 0.0
             return
-    
-        # Normalize the direction vector
-        dir_x /= distance
-        dir_y /= distance
         
         # Scale the direction by the blob's speed to get the movement vector
-        blob.dx = dir_x * 2.5
-        blob.dy = dir_y * 2.5
+        blob.dx = clamp(dir_x * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
+        blob.dy = clamp(dir_y * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
+
 
     def draw(self):
         # Draw to the main Screen
         self.screen.fill('black')
         
+        # Draw the world boundary
+        self.world_bounds.draw(self.screen, self.camera)
+        
         # Draw all the blobs
         for blob in self.blobs[::-1]:
-            if blob.x > self.camera.camera.left and blob.y > self.camera.camera.top and blob.x < self.camera.camera.right and blob.y < self.camera.camera.bottom:
-                blob.draw(self.screen, self.camera)
+            blob.draw(self.screen, self.camera)
 
         # Drawn screen to forefront
         pygame.display.flip()
@@ -93,11 +138,14 @@ class Game:
                 pg.quit()
                 sys.exit()
 
-            elif event.type == pg.KEYDOWN:
-                if event.key == pg.K_MINUS:  # Decrease zoom factor (zoom out)
-                    self.camera.zoom *= 0.09
-                elif event.key == pg.K_EQUALS:  # Increase zoom factor (zoom in)
-                    self.camera.zoom *= 1.01
+            elif event.type == pg.KEYUP:
+                if event.key == pg.K_MINUS and not tween.animating:  # set target zoom factor to zoom out
+                    self.camera_op = CAMERA_ZOOMOUT
+                    tween.start()  # start the tween
+                elif event.key == pg.K_EQUALS and not tween.animating:  # set target zoom factor to zoom in
+                    self.camera_op = CAMERA_ZOOMIN
+                    tween.start()  # start the tween
+
             # Check if the mouse has moved
             elif event.type == pygame.MOUSEMOTION:
                 mouseX, mouseY = event.pos
