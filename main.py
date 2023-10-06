@@ -38,7 +38,7 @@ class Game:
         self.new_game()
 
     def new_game(self):
-        # Create a new game
+        ''' Create a new game '''
         
         # Create blobs - me first
         pb = PlayerBlob("XOR", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 20, (255,255,0), 0.5)
@@ -51,7 +51,8 @@ class Game:
 
 
     def update(self):
-        
+        ''' Update executed once per frame '''
+        # Caption for now        
         pg.display.set_caption(f'{self.clock.get_fps():.1f} fps')
 
         # Don't let blob go out of the World
@@ -85,6 +86,7 @@ class Game:
 
         # Update the main player
         self.blobs[0].update()
+        self.camera.update(self.blobs[0])
 
         # Update the spacial hash since things moved
         # only after everything is done moving
@@ -94,6 +96,7 @@ class Game:
         player_dx = self.blobs[0].dx
         player_dy = self.blobs[0].dy
         for blob in self.blobs[1:]:
+            blob.wander()
             blob.update(player_dx, player_dy)
 #            self.spatial_hash.insert(blob)
 
