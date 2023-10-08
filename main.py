@@ -1,14 +1,17 @@
+from os import environ
+environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import pygame as pg
 import sys
 import random
 from settings import *
-from blob import *
-from camera import *
+from blob import Blob
+from playerblob import PlayerBlob
 from spacial_hash import *
 from math import hypot
 from common import clamp
 from tweener import *
+from camera import Camera
 from world import world
 
 # Tween motions
@@ -30,63 +33,31 @@ class Game:
         self.clock = pg.time.Clock()
         self.delta_time = 1
         self.blobs = []
-        self.camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.spatial_hash = None
         self.zoom_factor = 0
-        self.camera_op = CAMERA_STEADY
-        self.world_bounds = world(WORLD_WIDTH, WORLD_HEIGHT)
+        self.world = world(WORLD_WIDTH, WORLD_HEIGHT)
+        self.camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.new_game()
 
     def new_game(self):
         ''' Create a new game '''
         
-        # Create blobs - me first
-        pb = PlayerBlob("XOR", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 20, (255,255,0), 0.5)
+        # Create blobs - Main Player first (so always in index=0 position)
+        pb = PlayerBlob("main_player", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 20, (255,255,0), 0.5)
         self.blobs.append(pb)
 
         # Randomly add food blobs
         for i in range(200):
-            b = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, FOOD_COLOR_ARRAY[i%len(FOOD_COLOR_ARRAY)], 0)
+            b = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, FOOD_COLOR_ARRAY[i%len(FOOD_COLOR_ARRAY)], 0, 1)
             self.blobs.append(b)
-
 
     def update(self):
         ''' Update executed once per frame '''
         # Caption for now        
         pg.display.set_caption(f'{self.clock.get_fps():.1f} fps')
 
-        # Don't let blob go out of the World
-
-        # Boundary checks for x-coordinate
-        if self.blobs[0].world_x - self.blobs[0].size < 0:  # left boundary
-            self.blobs[0].world_x = self.blobs[0].size
-            self.blobs[0].dx = 0
-        elif self.blobs[0].world_x + self.blobs[0].size > WORLD_WIDTH:  # right boundary
-            self.blobs[0].world_x = WORLD_WIDTH - self.blobs[0].size
-            self.blobs[0].dx = 0
-
-        # Boundary checks for y-coordinate
-        if self.blobs[0].world_y - self.blobs[0].size < 0:  # top boundary
-            self.blobs[0].world_y = self.blobs[0].size
-            self.blobs[0].dy = 0
-        elif self.blobs[0].world_y + self.blobs[0].size > WORLD_HEIGHT:  # bottom boundary
-            self.blobs[0].world_y = WORLD_HEIGHT - self.blobs[0].size
-            self.blobs[0].dy = 0
-
-
-        # Update the zoom level using lerp
-        if tween.animating:
-            tween.update()
-            if self.camera_op == CAMERA_ZOOMIN:
-                self.camera.zoom = tween.value
-            elif self.camera_op == CAMERA_ZOOMOUT:
-                self.camera.zoom = 1 - (tween.value - 1)
-
-
-
         # Update the main player
-        self.blobs[0].update()
-        self.camera.update(self.blobs[0])
+        self.blobs[0].update(self.camera)
 
         # Update the spacial hash since things moved
         # only after everything is done moving
@@ -99,6 +70,22 @@ class Game:
             blob.wander()
             blob.update(player_dx, player_dy)
 #            self.spatial_hash.insert(blob)
+
+
+    def draw(self):
+        # Draw to the main Screen
+        self.screen.fill('black')
+        
+        # Draw the world boundary
+        self.world.draw(self.screen, self.camera)
+        
+        # Draw all the blobs
+        for blob in self.blobs[::-1]:
+            blob.draw(self.screen, self.camera)
+
+        # Drawn screen to forefront
+        pg.display.flip()
+
 
     def move_towards(self, blob, target_x, target_y):
         """Set blob's movement vectors to move it towards a target point."""
@@ -120,19 +107,6 @@ class Game:
         blob.dy = clamp(dir_y * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
 
 
-    def draw(self):
-        # Draw to the main Screen
-        self.screen.fill('black')
-        
-        # Draw the world boundary
-        self.world_bounds.draw(self.screen, self.camera)
-        
-        # Draw all the blobs
-        for blob in self.blobs[::-1]:
-            blob.draw(self.screen, self.camera)
-
-        # Drawn screen to forefront
-        pygame.display.flip()
 
     def check_events(self):
         # Check for keyboard events
@@ -141,16 +115,8 @@ class Game:
                 pg.quit()
                 sys.exit()
 
-            elif event.type == pg.KEYUP:
-                if event.key == pg.K_MINUS and not tween.animating:  # set target zoom factor to zoom out
-                    self.camera_op = CAMERA_ZOOMOUT
-                    tween.start()  # start the tween
-                elif event.key == pg.K_EQUALS and not tween.animating:  # set target zoom factor to zoom in
-                    self.camera_op = CAMERA_ZOOMIN
-                    tween.start()  # start the tween
-
             # Check if the mouse has moved
-            elif event.type == pygame.MOUSEMOTION:
+            elif event.type == pg.MOUSEMOTION:
                 mouseX, mouseY = event.pos
                 if len(self.blobs) > 0:
                     self.move_towards(self.blobs[0], mouseX, mouseY)
@@ -158,6 +124,7 @@ class Game:
     def run(self):
         # Called once to manage whole game
         while True:
+            # Order is very important here
             self.check_events()
             self.update()
             self.draw()

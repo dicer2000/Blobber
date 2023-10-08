@@ -1,15 +1,16 @@
-import pygame as pg
+
+# Debug settings - Verbosity 0-5
+VERBOSITY = 3
 
 # Window settings
 RES = WINDOW_WIDTH, WINDOW_HEIGHT = 1024, 800
 FPS = 60
 
-# World Size
-WORLD = WORLD_WIDTH, WORLD_HEIGHT = WINDOW_WIDTH * 2, WINDOW_HEIGHT * 2
+# World Settings
+WORLD = WORLD_WIDTH, WORLD_HEIGHT = WINDOW_WIDTH * 4, WINDOW_HEIGHT * 4
 
 # Blob Settings
 MAX_BLOB_VELOCITY = 2.0
-
 
 # Food Settings
 FOOD_COLOR_ARRAY = [
@@ -23,8 +24,3 @@ FOOD_COLOR_ARRAY = [
 
 
 
-# Camera Settings
-MAX_ZOOM = 5
-CAMERA_STEADY  = 0
-CAMERA_ZOOMIN  = 1
-CAMERA_ZOOMOUT = 2

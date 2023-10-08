@@ -4,10 +4,11 @@
 import pygame
 import noise
 import random
-from settings import WORLD_HEIGHT, WORLD_WIDTH
+from settings import WORLD_HEIGHT, WORLD_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH, VERBOSITY
+import math
 
 class Blob:
-    def __init__(self, name, x, y, size, color, speed=5):
+    def __init__(self, name, x, y, size, color, speed=5, wander=0):
         self.name = name
         self.x = x
         self.y = y
@@ -19,6 +20,7 @@ class Blob:
         self.squared_size = size * size
         self.color = color
         self.speed = speed
+        self.wander_multiplier = wander
         self.noise_offset_x = random.random() * 1000  # Random starting point for noise
         self.noise_offset_y = random.random() * 1000
 
@@ -39,52 +41,6 @@ class Blob:
     def has_touched(self, blob2):
         return self.has_touched(self, blob2)
 
-    def draw(self, screen, camera, player=False):
-        # Translated position based on camera
-        tx, ty, size = camera.apply(self)
-        if player:
-            tx, ty = self.x, self.y
-#        else:
-#            self.x, self.y = tx, ty
-
-        # Do this to make sure collissions work
-#        self.set_size(size)
-        
-        # Only draw me if I'm in the frame
-        if not player and ( self.x < camera.camera.left or self.y < camera.camera.top or self.x > camera.camera.right or self.y > camera.camera.bottom):
-            return
-
-        # Draw everything else
-        pygame.draw.circle(screen, self.color, (int(tx), int(ty)), int(size))  # Modify this line
-
-        # Font rendering for displaying x, y, dx, and dy
-        font = pygame.font.SysFont(None, 24)  # Use default font, size 24
-        position_text = font.render(f" X: {int(tx)},  Y: {int(ty)}", True, (255, 255, 0))
-        velocity_text = font.render(f"WX: {int(self.world_x)}, WY: {int(self.world_y)}", True, (255, 255, 0))
-
-        # Draw the text on the screen
-        screen.blit(position_text, (tx + self.size + 5, ty))  # Display next to the blob
-        screen.blit(velocity_text, (tx + self.size + 5, ty + 25))  # Below the position_text
-
-    def wander(self, step_size=0.05, noise_scale=5.0):
-        """
-        Update the blob's position using Perlin noise.
-        
-        Parameters:
-        - step_size: how fast the noise offset changes; larger values create more erratic movement
-        - noise_scale: scales the noise value; larger values spread the movement over a larger area
-        """
-        dx=dy=0
-        # Get Perlin noise values for both x and y directions
-        # dx = noise.pnoise1(self.noise_offset_x, octaves=3, persistence=0.5, lacunarity=2.0)
-        # dy = noise.pnoise1(self.noise_offset_y, octaves=3, persistence=0.5, lacunarity=2.0)
-        # Update the blob's position
-        self.x += dx * noise_scale
-        self.y += dy * noise_scale
-        
-        # Increment the noise offset for the next step
-        self.noise_offset_x += step_size
-        self.noise_offset_y += step_size
 
     def update(self, player_dx=0, player_dy=0):
         ''' Apply movement vectors to the blob's position '''
@@ -93,17 +49,12 @@ class Blob:
         self.world_x += self.dx
         self.world_y += self.dy
 
-        # Adjust based on PlayerBlob's movement
-        self.world_x -= player_dx
-        self.world_y -= player_dy
-
-        # Update screen positions
-        self.x += (self.dx - player_dx)
-        self.y += (self.dy - player_dy)
-
         # Boundary checks
         self.world_x = max(min(self.world_x, WORLD_WIDTH - self.size), self.size)
         self.world_y = max(min(self.world_y, WORLD_HEIGHT - self.size), self.size)
+
+        self.x += (self.dx - player_dx)
+        self.y += (self.dy - player_dy)
 
         '''
         # Can we actually move in direction we want?
@@ -121,33 +72,59 @@ class Blob:
             self.world_y -= self.dy
             self.world_y -= player_dy
 
-        # # Boundary checks for x-coordinate
-        # if self.world_x - self.size < 0:  # left boundary
-        #     self.world_x = self.size
-        # elif self.world_x + self.size > WORLD_WIDTH:  # right boundary
-        #     self.world_x = WORLD_WIDTH - self.size
-
-        # # Boundary checks for y-coordinate
-        # if self.world_y - self.size < 0:  # top boundary
-        #     self.world_y = self.size
-        # elif self.world_y + self.size > WORLD_HEIGHT:  # bottom boundary
-        #     self.world_y = WORLD_HEIGHT - self.size
 '''
+    def draw(self, screen, camera, player=False):
+        # Translated position based on camera
+        tx, ty = self.x, self.y #camera.apply(self)
+        size = self.size
+        if player:
+            tx, ty = self.x, self.y
+        
+        # If Out of frame, don't draw.  Return immediately
+        if not player and ( self.x < 0 or self.y < 0 or self.x > WINDOW_WIDTH or self.y > WINDOW_HEIGHT):
+            return
 
-class PlayerBlob(Blob):
-    def __init__(self, name, x, y, size, color, speed=5):
-        super().__init__(name, x, y, size, color, speed)
-        self.dx = 0  # change in x direction
-        self.dy = 0  # change in y direction
+        # Draw everything else
+        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), int(size))
 
-    def draw(self, screen, camera):
-        super().draw(screen, camera, True)
+        if VERBOSITY > 2:
+            # Font rendering for displaying x, y, dx, and dy
+            font = pygame.font.SysFont(None, 24)  # Use default font, size 24
+            position_text = font.render(f" X: {int(tx)},  Y: {int(ty)}", True, (255, 255, 0))
+            change_text = font.render(f"dx: {round(self.dx, 2)}, dy: {round(self.dy,2)}", True, (255, 255, 0))
+            velocity_text = font.render(f"wx: {int(self.world_x)}, wy: {int(self.world_y)}", True, (255, 255, 0))
 
-    def update(self):
+            # Draw the text on the screen
+            screen.blit(position_text, (self.x + self.size, self.y))  # Display next to the blob
+            screen.blit(change_text, (self.x + self.size, self.y + 20))  # Display next to the blob
+            screen.blit(velocity_text, (self.x + self.size, self.y + 40))  # Below the position_text
 
-        # Update the world_x and world_y based on movement vectors
-        self.world_x += self.dx
-        self.world_y += self.dy
+    def wander(self, step_size=0.05, noise_scale=5.0):
+        """
+        Update the blob's position using Perlin noise.
+        
+        Parameters:
+        - step_size: how fast the noise offset changes; larger values create more erratic movement
+        - noise_scale: scales the noise value; larger values spread the movement over a larger area
+        
+        Noise scale and Step size are actually factors of the blob 'wander' value
+        """
+        if self.wander_multiplier == 0:
+            return
+        
+        dx=dy=0
+        step_size *= self.wander_multiplier
+        noise_scale *= self.wander_multiplier
+        # Get Perlin noise values for both x and y directions
+        dx = noise.pnoise1(self.noise_offset_x, octaves=3, persistence=0.5, lacunarity=2.0)
+        dy = noise.pnoise1(self.noise_offset_y, octaves=3, persistence=0.5, lacunarity=2.0)
+        # Update the blob's position
+        self.x += dx * noise_scale
+        self.y += dy * noise_scale
+        self.world_x += dx * noise_scale
+        self.world_y += dy * noise_scale
+        
+        # Increment the noise offset for the next step
+        self.noise_offset_x += step_size
+        self.noise_offset_y += step_size
 
-
-        # Don't call the super's update here!

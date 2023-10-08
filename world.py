@@ -35,7 +35,7 @@ class world:
             pygame.draw.line(screen, self.grid_color, start, end, 1)  # 1 is line width
 
         # Vertical lines
-        for x in range(0, self.world_width + self.grid_spacing, self.grid_spacing):
+        for x in range(0, self.world_width, self.grid_spacing):
             start = camera.world_to_screen(x, 0)
             end = camera.world_to_screen(x, self.world_height)
             pygame.draw.line(screen, self.grid_color, start, end, 1)  # 1 is line width
