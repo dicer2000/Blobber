@@ -6,6 +6,7 @@ import noise
 import random
 from settings import WORLD_HEIGHT, WORLD_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH, VERBOSITY
 import math
+import time
 
 class Blob:
     def __init__(self, name, x, y, size, color, speed=5, wander=0):
@@ -34,12 +35,9 @@ class Blob:
         dy = blob1.y - blob2.y
         return dx * dx + dy * dy
 
-    def has_touched(self, blob1, blob2):
-        squared_sum_sizes = blob1.squared_size + blob2.squared_size + 2 * blob1.size * blob2.size  # This accounts for the total squared distance for two circles to touch (size1 + size2)^2
-        return self.squared_distance(blob1, blob2) <= squared_sum_sizes
-
     def has_touched(self, blob2):
-        return self.has_touched(self, blob2)
+        squared_sum_sizes = self.squared_size + blob2.squared_size + 2 * self.size * blob2.size  # This accounts for the total squared distance for two circles to touch (size1 + size2)^2
+        return self.squared_distance(self, blob2) <= squared_sum_sizes
 
 
     def update(self, player_dx=0, player_dy=0):
@@ -86,6 +84,7 @@ class Blob:
 
         # Draw everything else
         pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), int(size))
+        self.draw_hairs(screen, time)
 
         if VERBOSITY > 2:
             # Font rendering for displaying x, y, dx, and dy
@@ -98,6 +97,28 @@ class Blob:
             screen.blit(position_text, (self.x + self.size, self.y))  # Display next to the blob
             screen.blit(change_text, (self.x + self.size, self.y + 20))  # Display next to the blob
             screen.blit(velocity_text, (self.x + self.size, self.y + 40))  # Below the position_text
+    
+    
+    def draw_hairs(self, screen, time):
+        num_hairs = 20  # Adjust based on how "hairy" you want the blob to be
+        base_hair_length = 10  # Base length of each hair
+        noise_scale = 1.5  # Scale of the noise, adjust for more/less variation
+
+        for i in range(num_hairs):
+            angle = 2 * math.pi * i / num_hairs
+
+            current_time = int(time.time() * 10 * random.random()) 
+
+            # Use sine functions for more dynamic, wavy hair
+            # Adjust 0.1 and 3 for varying frequency and amplitude
+            hair_length = base_hair_length + 5 * math.sin(0.3 * current_time + angle)
+
+            start_x = self.x + self.size * math.cos(angle)
+            start_y = self.y + self.size * math.sin(angle)
+            end_x = self.x + (self.size + hair_length) * math.cos(angle)
+            end_y = self.y + (self.size + hair_length) * math.sin(angle)
+
+            pygame.draw.line(screen, self.color, (start_x, start_y), (end_x, end_y ), 1)
 
     def wander(self, step_size=0.05, noise_scale=5.0):
         """
