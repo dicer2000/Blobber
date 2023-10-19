@@ -9,7 +9,7 @@ import math
 import time
 
 class Blob:
-    def __init__(self, name, x, y, size, color, speed=5, wander=0):
+    def __init__(self, name, x, y, size, color, speed=5, wander=0, hair_length = 20, hair_count = 20):
         self.name = name
         self.x = x
         self.y = y
@@ -22,6 +22,8 @@ class Blob:
         self.color = color
         self.speed = speed
         self.wander_multiplier = wander
+        self.hair_size = hair_length
+        self.hair_count = hair_count
         self.noise_offset_x = random.random() * 1000  # Random starting point for noise
         self.noise_offset_y = random.random() * 1000
 
@@ -84,7 +86,7 @@ class Blob:
 
         # Draw everything else
         pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), int(size))
-        self.draw_hairs(screen, time)
+        self.draw_hairs(screen)
 
         if VERBOSITY > 2:
             # Font rendering for displaying x, y, dx, and dy
@@ -98,20 +100,17 @@ class Blob:
             screen.blit(change_text, (self.x + self.size, self.y + 20))  # Display next to the blob
             screen.blit(velocity_text, (self.x + self.size, self.y + 40))  # Below the position_text
     
-    
-    def draw_hairs(self, screen, time):
-        num_hairs = 20  # Adjust based on how "hairy" you want the blob to be
-        base_hair_length = 10  # Base length of each hair
+    def draw_hairs(self, screen):
         noise_scale = 1.5  # Scale of the noise, adjust for more/less variation
 
-        for i in range(num_hairs):
-            angle = 2 * math.pi * i / num_hairs
+        for i in range(self.hair_count):
+            angle = 2 * math.pi * i / self.hair_count
 
             current_time = int(time.time() * 10 * random.random()) 
 
             # Use sine functions for more dynamic, wavy hair
             # Adjust 0.1 and 3 for varying frequency and amplitude
-            hair_length = base_hair_length + 5 * math.sin(0.3 * current_time + angle)
+            hair_length = self.hair_size + 5 * math.sin(0.3 * current_time + angle)
 
             start_x = self.x + self.size * math.cos(angle)
             start_y = self.y + self.size * math.sin(angle)
@@ -119,6 +118,7 @@ class Blob:
             end_y = self.y + (self.size + hair_length) * math.sin(angle)
 
             pygame.draw.line(screen, self.color, (start_x, start_y), (end_x, end_y ), 1)
+
 
     def wander(self, step_size=0.05, noise_scale=5.0):
         """

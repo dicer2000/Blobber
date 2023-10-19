@@ -26,7 +26,7 @@ FOOD_COLOR_ARRAY = [
 ]
 
 # Sound settings
-BACKGROUND_MUSIC = True
+BACKGROUND_MUSIC = False
 GAME_SOUNDS = True
 SOUNDS = ['collision.wav',
           'bonus1.mp3',

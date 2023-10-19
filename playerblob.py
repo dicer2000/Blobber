@@ -2,8 +2,8 @@ from blob import Blob
 from settings import WORLD_HEIGHT, WORLD_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH, VERBOSITY
 
 class PlayerBlob(Blob):
-    def __init__(self, name, x, y, size, color, speed=5):
-        super().__init__(name, x, y, size, color, speed)
+    def __init__(self, name, x, y, size, color, speed=5, hair_length = 20, hair_count = 20):
+        super().__init__(name, x, y, size, color, speed, hair_length, hair_count)
         self.dx = 0  # change in x direction
         self.dy = 0  # change in y direction
 
