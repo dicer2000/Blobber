@@ -1,3 +1,11 @@
+'''
+Blobber Game
+by Brett Huffman
+and (add your name)
+Comp Sci 333 - Computer Networking
+(c)2023.  All Rights Reserved
+-----------------------------------
+'''
 
 # Debug settings - Verbosity 0-5
 VERBOSITY = 0
@@ -10,10 +18,26 @@ FPS = 60
 WORLD = WORLD_WIDTH, WORLD_HEIGHT = WINDOW_WIDTH * 4, WINDOW_HEIGHT * 4
 COLLISION_CELL_SIZE = 50
 COLLISION_BOUNDING_BOX_SIZE = 250 # 250 pixels around the center player are checked
-GAME_MODE = None
+IS_CLIENT = 0
+IS_SERVER = 1
 
 # Blob Settings
 MAX_BLOB_VELOCITY = 2.0
+START_BLOB = [
+    {'question': 'Client/Server', 'options': ['Client', 'Server'], 'answer': IS_CLIENT},
+    {'question': 'Color', 'options': ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple'], 'answer': 0},
+    {'question': 'Blob Name', 'options': None, 'answer': ''},
+    {'question': 'Hairiness', 'options': ['None', 'Baby Fuzz', 'Just Right', 'Beast Mode', 'Ridiculous'], 'answer': 0},
+    {'question': 'Server IP', 'options': None, 'answer': ''},
+]
+BLOB_COLOR_ARRAY = [
+    (249, 50, 107),  # Lighter Red
+    (255, 255, 80),  # Lighter Orange
+    (255, 255, 50),  # Lighter Yellow
+    (89, 196, 93),   # Lighter Green
+    (89, 118, 196),  # Lighter Blue
+    (167, 89, 196)   # Lighter Purple
+]
 
 # Food Settings
 FOOD_COLOR_ARRAY = [
@@ -21,7 +45,7 @@ FOOD_COLOR_ARRAY = [
     (255, 223, 0),    # Gold
     (144, 238, 144),  # Light Green (LightSeaGreen)
     (255, 165, 0),    # Orange
-    (255, 0, 0),      # Red
+    (191, 54, 12),     # Red
     (128, 0, 128)     # Purple
 ]
 

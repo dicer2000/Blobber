@@ -16,7 +16,6 @@ class Blob:
         self.world_x = x # X coordinate in world space
         self.world_y = y # Y coordinate in world space
         self.dx = self.dy = 0.0 # Not moving
-        self.speed = 0
         self.size = size
         self.squared_size = size * size
         self.color = color
@@ -26,6 +25,7 @@ class Blob:
         self.hair_count = hair_count
         self.noise_offset_x = random.random() * 1000  # Random starting point for noise
         self.noise_offset_y = random.random() * 1000
+        self.font = pygame.font.SysFont(None, 24)  # Use default font, size 24
 
     # Set a new size and also it's square
     def set_size(self, new_size):
@@ -56,23 +56,6 @@ class Blob:
         self.x += (self.dx - player_dx)
         self.y += (self.dy - player_dy)
 
-        '''
-        # Can we actually move in direction we want?
-        if self.world_x - self.dx > 0:
-            # Only if not going to left of world
-            self.x -= player_dx
-            self.x += self.dx
-            self.world_x += self.dx
-            self.world_x -= player_dx
-
-        if self.world_y - self.dy > 0:
-            # Only if not going off the top of world
-            self.y -= player_dy
-            self.y += self.dy
-            self.world_y -= self.dy
-            self.world_y -= player_dy
-
-'''
     def draw(self, screen, camera, player=False):
         # Translated position based on camera
         tx, ty = self.x, self.y #camera.apply(self)
@@ -88,15 +71,19 @@ class Blob:
         pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), int(size))
         self.draw_hairs(screen)
 
+        # Draw name
+        if player:
+            name_text = self.font.render(self.name, True, (200, 200, 200))
+            screen.blit(name_text, (self.x + self.size, self.y))  # Display next to the blob
+
         if VERBOSITY > 2:
             # Font rendering for displaying x, y, dx, and dy
-            font = pygame.font.SysFont(None, 24)  # Use default font, size 24
-            position_text = font.render(f" X: {int(tx)},  Y: {int(ty)}", True, (255, 255, 0))
-            change_text = font.render(f"dx: {round(self.dx, 2)}, dy: {round(self.dy,2)}", True, (255, 255, 0))
-            velocity_text = font.render(f"wx: {int(self.world_x)}, wy: {int(self.world_y)}", True, (255, 255, 0))
+            position_text = self.font.render(f" X: {int(tx)},  Y: {int(ty)}", True, (255, 255, 0))
+            change_text = self.font.render(f"dx: {round(self.dx, 2)}, dy: {round(self.dy,2)}", True, (255, 255, 0))
+            velocity_text = self.font.render(f"wx: {int(self.world_x)}, wy: {int(self.world_y)}", True, (255, 255, 0))
 
             # Draw the text on the screen
-            screen.blit(position_text, (self.x + self.size, self.y))  # Display next to the blob
+            screen.blit(position_text, (self.x + self.size, self.y + 20))  # Display next to the blob
             screen.blit(change_text, (self.x + self.size, self.y + 20))  # Display next to the blob
             screen.blit(velocity_text, (self.x + self.size, self.y + 40))  # Below the position_text
     
@@ -149,3 +136,22 @@ class Blob:
         self.noise_offset_x += step_size
         self.noise_offset_y += step_size
 
+    # Setter for speed
+    def set_speed(self, new_speed):
+        self.speed = new_speed
+
+    # Setter for color
+    def set_color(self, new_color):
+        self.color = new_color
+
+    # Setter for hair_size
+    def set_hair_size(self, new_hair_size):
+        self.hair_size = new_hair_size
+
+    # Setter for hair_count
+    def set_hair_count(self, new_hair_count):
+        self.hair_count = new_hair_count
+
+    # Setter for name
+    def set_name(self, new_name):
+        self.name = new_name

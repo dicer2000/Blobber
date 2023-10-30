@@ -1,4 +1,10 @@
 '''
+Blobber Game
+by Brett Huffman
+and (add your name)
+Comp Sci 333 - Computer Networking
+(c)2023.  All Rights Reserved
+-----------------------------------
 Program Main Application
 Install items:
 - pygame (pip install pygame)
@@ -15,22 +21,23 @@ from settings import *
 from blob import Blob
 from playerblob import PlayerBlob
 from math import hypot
-from common import clamp, get_private_ip
+from common import clamp, get_private_ip, GameModes
 from tweener import *
 from camera import Camera
 from world import world
 from spatial_hash import spatial_hash
 from pygame.locals import *
+from mainmenu import main_menu
 
 # Tween motions
 tween = Tween(begin=1.0, 
                end=1.05,
-               duration=100,
+               duration=1000,
                easing=Easing.LINEAR,
-               easing_mode=EasingMode.IN,
+               easing_mode=EasingMode.IN_OUT,
                boomerang=True,
-               loop=False,
-               reps=1)
+               loop=True,
+               reps=0) # Infinite Reps
 
 
 # Main game object
@@ -40,7 +47,8 @@ class Game:
         self.screen = pg.display.set_mode(RES)
         self.clock = pg.time.Clock()
         self.ip_address = get_private_ip()
-        self.game_mode = None
+        self.game_mode = GameModes.MAIN_MENU
+        self.game_settings = START_BLOB[:]
         self.delta_time = 1
         self.blobs = []
         self.spatial_hash = None
@@ -48,8 +56,10 @@ class Game:
         self.world = world(WORLD_WIDTH, WORLD_HEIGHT)
         self.camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.spatial_hash = spatial_hash(COLLISION_CELL_SIZE)
-        self.collision_sound = None
         self.sounds = dict()
+        self.blobs = []
+        self.main_menu = main_menu(self.screen, self.sounds, self.game_settings)
+        self.font = pg.font.SysFont(None, 72)
         self.load_sounds()
         self.new_game()
 
@@ -63,7 +73,7 @@ class Game:
 
         # Randomly add food blobs
         for i in range(200):
-            fb = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, FOOD_COLOR_ARRAY[i%len(FOOD_COLOR_ARRAY)], 0, 1)
+            fb = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, FOOD_COLOR_ARRAY[i%len(FOOD_COLOR_ARRAY)], 0, 1, 8, 6)
             self.blobs.append(fb)
             self.spatial_hash.insert(fb)  # For each food blob
 
@@ -82,42 +92,45 @@ class Game:
         # Caption for now        
         pg.display.set_caption(f'{self.clock.get_fps():.1f} fps')
 
-        # Update the main player
-        self.blobs[0].update(self.camera)
 
-        # Update the spacial hash since things moved
-        # only after everything is done moving
-        # Clear the spatial hash
-        self.spatial_hash.buckets.clear()
 
-        # Update all other blobs
-        player_dx = self.blobs[0].dx
-        player_dy = self.blobs[0].dy
-        for blob in self.blobs[1:]:
-            blob.wander()
-            blob.update(player_dx, player_dy)
-            self.spatial_hash.insert(blob)
+        if self.game_settings[0]['answer'] == IS_SERVER:
+            # Update the main player
+            self.blobs[0].update(self.camera)
 
-        # Define a radius for the query
-        box = (self.blobs[0].x - COLLISION_BOUNDING_BOX_SIZE, self.blobs[0].y - COLLISION_BOUNDING_BOX_SIZE, self.blobs[0].x + COLLISION_BOUNDING_BOX_SIZE, self.blobs[0].y + COLLISION_BOUNDING_BOX_SIZE)
+            # Update the spacial hash since things moved
+            # only after everything is done moving
+            # Clear the spatial hash
+            self.spatial_hash.buckets.clear()
 
-        # Retrieve the blobs using spatial hash
-        nearby_blobs = self.spatial_hash.potential_collisions(self.blobs[0])
+            # Update all other blobs
+            player_dx = self.blobs[0].dx
+            player_dy = self.blobs[0].dy
+            for blob in self.blobs[1:]:
+                blob.wander()
+                blob.update(player_dx, player_dy)
+                self.spatial_hash.insert(blob)
 
-        # Handle collisions
-        for blob in nearby_blobs:
-            if blob != self.blobs[0] and blob.has_touched(self.blobs[0]):
-                temp_blob_type = blob.name
-                new_radius = (self.blobs[0].squared_size + blob.squared_size)**0.5
-                self.blobs[0].set_size(new_radius)
-                if GAME_SOUNDS:
-                    self.sounds['collision'].play()
-                self.blobs.remove(blob)
+            # Retrieve the blobs using spatial hash
+            nearby_blobs = self.spatial_hash.potential_collisions(self.blobs[0])
 
-                if(temp_blob_type == 'food'):
-                    fb = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, FOOD_COLOR_ARRAY[random.randint(0, len(FOOD_COLOR_ARRAY) - 1)], 0, 1)
-                    self.blobs.append(fb)
+            # Handle collisions
+            if self.game_mode == GameModes.PLAYING:
+                for blob in nearby_blobs:
+                    if blob != self.blobs[0] and blob.has_touched(self.blobs[0]):
+                        temp_blob_type = blob.name
+                        new_radius = (self.blobs[0].squared_size + blob.squared_size)**0.5
+                        self.blobs[0].set_size(new_radius)
+                        if GAME_SOUNDS:
+                            self.sounds['collision'].play()
+                        self.blobs.remove(blob)
 
+                        if(temp_blob_type == 'food'):
+                            fb = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, FOOD_COLOR_ARRAY[random.randint(0, len(FOOD_COLOR_ARRAY) - 1)], 0, 1)
+                            self.blobs.append(fb)
+        else:
+            pass
+        
     def draw(self):
         # Draw to the main Screen
         self.screen.fill('black')
@@ -128,6 +141,12 @@ class Game:
         # Draw all the blobs
         for blob in self.blobs[::-1]:
             blob.draw(self.screen, self.camera)
+
+        # Draw Paused if screen paused
+        if self.game_mode == GameModes.PAUSED:
+            name_text = self.font.render("P A U S E D", True, (240, 240, 240))
+            text_rect = name_text.get_rect(center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2-100))
+            self.screen.blit(name_text, text_rect)
 
         # Drawn screen to forefront
         pg.display.flip()
@@ -152,50 +171,6 @@ class Game:
         blob.dx = clamp(dir_x * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
         blob.dy = clamp(dir_y * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
 
-    def show_main_menu(self, screen):
-        title_font = pg.font.SysFont("Comic Sans", 80)
-        menu_font = pg.font.Font(None, 48)
-        background_image = pg.image.load('images/bg/blob2.png')
-        self.background_image = pg.transform.scale(background_image, (WINDOW_WIDTH, WINDOW_HEIGHT))
-
-        # Play the game music loop
-        if BACKGROUND_MUSIC:
-            self.sounds['gamemusic1'].stop()
-            self.sounds['main_menu'].play(-1)
-
-        while True:
-            for event in pg.event.get():
-                if event.type == pg.QUIT or (event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE):
-                    pg.quit()
-                    sys.exit()
-
-            keys = pg.key.get_pressed()
-            if keys[pg.K_s]:
-                self.game_mode = "Server"
-                # Play the game music loop
-                if BACKGROUND_MUSIC:
-                    self.sounds['main_menu'].stop()
-                    self.sounds['gamemusic1'].play(-1)
-
-                return
-            elif keys[pg.K_c]:
-                self.game_mode = "Client"
-                # Play the game music loop
-                if BACKGROUND_MUSIC:
-                    self.sounds['main_menu'].stop()
-                    self.sounds['gamemusic1'].play(-1)
-                return
-
-            self.screen.blit(self.background_image, (0, 0))
-            title_text = title_font.render('Blobber', True, (216, 191, 216))
-            server_text = menu_font.render(f'Press "S" for Server Mode: {self.ip_address}', True, (255, 255, 255))
-            client_text = menu_font.render('Press "C" for Client Mode', True, (255, 255, 255))
-
-            screen.blit(title_text, [600, 20])
-            screen.blit(server_text, [200, WINDOW_HEIGHT - 100])
-            screen.blit(client_text, [200, WINDOW_HEIGHT - 50])
-
-            pg.display.update()
 
     def check_events(self):
         # Check for keyboard events
@@ -204,9 +179,16 @@ class Game:
                 pg.quit()
                 sys.exit()
             if event.type == pg.KEYDOWN and event.key == pg.K_q:
-                self.game_mode = None
+                # End playing and go back to main menu
+                self.game_mode = GameModes.MAIN_MENU
+            # If Server Mode allow to switch between Paused and Playing
+            elif self.game_settings[0]['answer'] == IS_SERVER and event.type == pg.KEYDOWN and event.key == pg.K_p:
+                if self.game_mode == GameModes.PLAYING:
+                    self.game_mode = GameModes.PAUSED
+                elif self.game_mode == GameModes.PAUSED:
+                    self.game_mode = GameModes.PLAYING
             # Check if the mouse has moved
-            elif event.type == pg.MOUSEMOTION:
+            elif self.game_mode == GameModes.PLAYING and event.type == pg.MOUSEMOTION:
                 mouseX, mouseY = event.pos
                 if len(self.blobs) > 0:
                     self.move_towards(self.blobs[0], mouseX, mouseY)
@@ -219,12 +201,25 @@ class Game:
             self.check_events()
 
             # If no Game Mode, show main menu
-            if self.game_mode == None:
-                self.show_main_menu(self.screen)
+            if self.game_mode == GameModes.MAIN_MENU:
+                self.game_settings = self.main_menu.show()
+                # Set all settings from main menu:
+                # name
+                temp = self.game_settings[2]['answer']
+                self.blobs[0].set_name(temp)
+                # color
+                temp = BLOB_COLOR_ARRAY[self.game_settings[1]['answer']]
+                self.blobs[0].set_color(temp)
+                # hair
+                temp = self.game_settings[3]['answer']
+                self.blobs[0].set_hair_count(temp * 14)
+                self.blobs[0].set_hair_size(temp * 2 + 10)
+                self.game_mode = GameModes.PAUSED
             else:
                 if frame_id % 2 == 0: #Experimental
                     self.update()
                 self.draw()
+                    
                 self.delta_time = self.clock.tick(FPS)
                 frame_id += 1
 
