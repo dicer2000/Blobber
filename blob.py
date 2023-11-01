@@ -25,7 +25,6 @@ class Blob:
         self.hair_count = hair_count
         self.noise_offset_x = random.random() * 1000  # Random starting point for noise
         self.noise_offset_y = random.random() * 1000
-        self.font = pygame.font.SysFont(None, 24)  # Use default font, size 24
 
     # Set a new size and also it's square
     def set_size(self, new_size):
@@ -72,20 +71,20 @@ class Blob:
         self.draw_hairs(screen)
 
         # Draw name
-        if player:
-            name_text = self.font.render(self.name, True, (200, 200, 200))
-            screen.blit(name_text, (self.x + self.size, self.y))  # Display next to the blob
+        # if player:
+        #     name_text = self.font.render(self.name, True, (200, 200, 200))
+        #     screen.blit(name_text, (self.x + self.size, self.y))  # Display next to the blob
 
-        if VERBOSITY > 2:
+        # if VERBOSITY > 2:
             # Font rendering for displaying x, y, dx, and dy
-            position_text = self.font.render(f" X: {int(tx)},  Y: {int(ty)}", True, (255, 255, 0))
-            change_text = self.font.render(f"dx: {round(self.dx, 2)}, dy: {round(self.dy,2)}", True, (255, 255, 0))
-            velocity_text = self.font.render(f"wx: {int(self.world_x)}, wy: {int(self.world_y)}", True, (255, 255, 0))
+            # position_text = self.font.render(f" X: {int(tx)},  Y: {int(ty)}", True, (255, 255, 0))
+            # change_text = self.font.render(f"dx: {round(self.dx, 2)}, dy: {round(self.dy,2)}", True, (255, 255, 0))
+            # velocity_text = self.font.render(f"wx: {int(self.world_x)}, wy: {int(self.world_y)}", True, (255, 255, 0))
 
             # Draw the text on the screen
-            screen.blit(position_text, (self.x + self.size, self.y + 20))  # Display next to the blob
-            screen.blit(change_text, (self.x + self.size, self.y + 20))  # Display next to the blob
-            screen.blit(velocity_text, (self.x + self.size, self.y + 40))  # Below the position_text
+            # screen.blit(position_text, (self.x + self.size, self.y + 20))  # Display next to the blob
+            # screen.blit(change_text, (self.x + self.size, self.y + 20))  # Display next to the blob
+            # screen.blit(velocity_text, (self.x + self.size, self.y + 40))  # Below the position_text
     
     def draw_hairs(self, screen):
         noise_scale = 1.5  # Scale of the noise, adjust for more/less variation

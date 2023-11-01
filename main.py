@@ -29,6 +29,8 @@ from spatial_hash import spatial_hash
 from pygame.locals import *
 from mainmenu import main_menu
 
+import pickle
+
 # Tween motions
 tween = Tween(begin=1.0, 
                end=1.05,
@@ -60,6 +62,7 @@ class Game:
         self.blobs = []
         self.main_menu = main_menu(self.screen, self.sounds, self.game_settings)
         self.font = pg.font.SysFont(None, 72)
+        self.font_sm = pg.font.SysFont(None, 24)  # Use default font, size 24
         self.load_sounds()
         self.new_game()
 
@@ -128,6 +131,9 @@ class Game:
                         if(temp_blob_type == 'food'):
                             fb = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, FOOD_COLOR_ARRAY[random.randint(0, len(FOOD_COLOR_ARRAY) - 1)], 0, 1)
                             self.blobs.append(fb)
+
+            # Prepare everything to send to clients
+            serialized_data = pickle.dumps(self.blobs)
         else:
             pass
         
@@ -141,7 +147,10 @@ class Game:
         # Draw all the blobs
         for blob in self.blobs[::-1]:
             blob.draw(self.screen, self.camera)
-
+            if blob.name != 'food': # Show the player name
+                name_text = self.font_sm.render(blob.name, True, (200, 200, 200))
+                self.screen.blit(name_text, (blob.x + blob.size, blob.y))
+        
         # Draw Paused if screen paused
         if self.game_mode == GameModes.PAUSED:
             name_text = self.font.render("P A U S E D", True, (240, 240, 240))

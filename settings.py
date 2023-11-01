@@ -27,7 +27,7 @@ START_BLOB = [
     {'question': 'Client/Server', 'options': ['Client', 'Server'], 'answer': IS_CLIENT},
     {'question': 'Color', 'options': ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple'], 'answer': 0},
     {'question': 'Blob Name', 'options': None, 'answer': ''},
-    {'question': 'Hairiness', 'options': ['None', 'Baby Fuzz', 'Just Right', 'Beast Mode', 'Ridiculous'], 'answer': 0},
+    {'question': 'Hairiness', 'options': ['Dwayne J', 'Baby Fuzz', 'Just Right', 'Hairy Biker', 'Beast Mode'], 'answer': 0},
     {'question': 'Server IP', 'options': None, 'answer': ''},
 ]
 BLOB_COLOR_ARRAY = [
