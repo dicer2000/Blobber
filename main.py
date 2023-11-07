@@ -10,6 +10,7 @@ Install items:
 - pygame (pip install pygame)
 - tweener (pip install tweener)
 - spatial (pip install spatial)
+- noise (pip install noise)
 '''
 from os import environ
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
@@ -62,7 +63,9 @@ class Game:
         self.blobs = []
         self.main_menu = main_menu(self.screen, self.sounds, self.game_settings)
         self.font = pg.font.SysFont(None, 72)
-        self.font_sm = pg.font.SysFont(None, 24)  # Use default font, size 24
+        self.font_sm = pg.font.SysFont(None, 24)
+        self.is_eaten = False
+        self.eater = None
         self.load_sounds()
         self.new_game()
 
@@ -121,19 +124,40 @@ class Game:
             if self.game_mode == GameModes.PLAYING:
                 for blob in nearby_blobs:
                     if blob != self.blobs[0] and blob.has_touched(self.blobs[0]):
-                        temp_blob_type = blob.name
-                        new_radius = (self.blobs[0].squared_size + blob.squared_size)**0.5
-                        self.blobs[0].set_size(new_radius)
-                        if GAME_SOUNDS:
-                            self.sounds['collision'].play()
-                        self.blobs.remove(blob)
 
-                        if(temp_blob_type == 'food'):
+                        if(blob.name == 'food'):
+                            # Add the size
+                            new_radius = (self.blobs[0].squared_size + blob.squared_size)**0.5
+                            self.blobs[0].set_size(new_radius)
+
+                            # Remove the old one
+                            if GAME_SOUNDS:
+                                self.sounds['collision'].play()
+                            self.blobs.remove(blob)
+                            # Make a new food blob
                             fb = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, FOOD_COLOR_ARRAY[random.randint(0, len(FOOD_COLOR_ARRAY) - 1)], 0, 1)
                             self.blobs.append(fb)
 
+                        # Else if this is a blob eating another blob...
+                        elif self.blobs[0].is_eaten == False and isinstance(blob, PlayerBlob) and isinstance(self.blobs[0], PlayerBlob):
+                            # Determine which blob is bigger, hence the eater
+                            if blob.size > self.blobs[0].size:
+                                # You got eaten!
+                                self.is_eaten = True
+                                eater_blob = blob
+                                eaten_player = self.blobs[0]
+                            else: # You are the eater!
+                                
+                                eater_blob = self.blobs[0]
+                                eaten_player = blob
+
+                    # Check if only one PlayerBlob remains that is not eaten
+#                if self.game_mode == GameModes.PLAYING and len([b for b in self.blobs if isinstance(b, PlayerBlob) and not b.is_eaten]) == 1:
+                    # End game condition met
+#                    self.game_mode = GameModes.GAME_OVER
+
             # Prepare everything to send to clients
-            serialized_data = pickle.dumps(self.blobs)
+#            serialized_data = pickle.dumps(self.blobs)
         else:
             pass
         

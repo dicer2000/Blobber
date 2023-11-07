@@ -4,8 +4,8 @@
 from settings import COLLISION_CELL_SIZE
 
 class spatial_hash:
-    def __init__(self, cell_size):
-        self.cell_size = COLLISION_CELL_SIZE
+    def __init__(self, cell_size = COLLISION_CELL_SIZE):
+        self.cell_size = cell_size
         self.buckets = {}
 
     def _get_bucket_keys(self, x, y):

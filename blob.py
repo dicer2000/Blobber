@@ -2,7 +2,7 @@
 #
 
 import pygame
-import noise
+from opensimplex import OpenSimplex
 import random
 from settings import WORLD_HEIGHT, WORLD_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH, VERBOSITY
 import math
@@ -25,6 +25,7 @@ class Blob:
         self.hair_count = hair_count
         self.noise_offset_x = random.random() * 1000  # Random starting point for noise
         self.noise_offset_y = random.random() * 1000
+        self.simplex_noise = OpenSimplex(seed=int(time.time()))
 
     # Set a new size and also it's square
     def set_size(self, new_size):
@@ -108,23 +109,25 @@ class Blob:
 
     def wander(self, step_size=0.05, noise_scale=5.0):
         """
-        Update the blob's position using Perlin noise.
-        
+        Update the blob's position using noise.
+
         Parameters:
         - step_size: how fast the noise offset changes; larger values create more erratic movement
         - noise_scale: scales the noise value; larger values spread the movement over a larger area
-        
+
         Noise scale and Step size are actually factors of the blob 'wander' value
         """
         if self.wander_multiplier == 0:
             return
         
-        dx=dy=0
+        dx = dy = 0
         step_size *= self.wander_multiplier
         noise_scale *= self.wander_multiplier
-        # Get Perlin noise values for both x and y directions
-        dx = noise.pnoise1(self.noise_offset_x, octaves=3, persistence=0.5, lacunarity=2.0)
-        dy = noise.pnoise1(self.noise_offset_y, octaves=3, persistence=0.5, lacunarity=2.0)
+
+        # Get noise values for both x and y directions using noise2 function
+        dx = self.simplex_noise.noise2(x=self.noise_offset_x, y=self.noise_offset_x)
+        dy = self.simplex_noise.noise2(x=self.noise_offset_y, y=self.noise_offset_y)
+        
         # Update the blob's position
         self.x += dx * noise_scale
         self.y += dy * noise_scale
