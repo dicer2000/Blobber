@@ -9,8 +9,7 @@ Program Main Application
 Install items:
 - pygame (pip install pygame)
 - tweener (pip install tweener)
-- spatial (pip install spatial)
-- noise (pip install noise)
+- OpenSimplex (pip install OpenSimplex)
 '''
 from os import environ
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
