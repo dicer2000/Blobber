@@ -11,10 +11,14 @@ import time
 class Blob:
     def __init__(self, name, x, y, size, color, speed=5, wander=0, hair_length = 20, hair_count = 20):
         self.name = name
-        self.x = x
-        self.y = y
-        self.world_x = x # X coordinate in world space
-        self.world_y = y # Y coordinate in world space
+
+        # World coordinates removed as everything is world
+        # the camera class converts them to camera-ready
+#        self.world_x = x # X coordinate in world space
+#        self.world_y = y # Y coordinate in world space
+        self.x = x # Camera-relative X coordinate
+        self.y = y # Camera-relative Y coordinate
+
         self.dx = self.dy = 0.0 # Not moving
         self.size = size
         self.squared_size = size * size
@@ -26,6 +30,7 @@ class Blob:
         self.noise_offset_x = random.random() * 1000  # Random starting point for noise
         self.noise_offset_y = random.random() * 1000
         self.simplex_noise = OpenSimplex(seed=int(time.time()))
+        self.font = pygame.font.SysFont(None, 24)
 
     # Set a new size and also it's square
     def set_size(self, new_size):
@@ -44,50 +49,43 @@ class Blob:
 
     def update(self, player_dx=0, player_dy=0):
         ''' Apply movement vectors to the blob's position '''
-
-        # Adjust based on blob's own movement
-        self.world_x += self.dx
-        self.world_y += self.dy
+        self.x += self.dx
+        self.y += self.dy
 
         # Boundary checks
-        self.world_x = max(min(self.world_x, WORLD_WIDTH - self.size), self.size)
-        self.world_y = max(min(self.world_y, WORLD_HEIGHT - self.size), self.size)
-
-        self.x += (self.dx - player_dx)
-        self.y += (self.dy - player_dy)
+        self.x = max(min(self.x, WORLD_WIDTH - self.size), self.size)
+        self.y = max(min(self.y, WORLD_HEIGHT - self.size), self.size)
 
     def draw(self, screen, camera, player=False):
         # Translated position based on camera
-        tx, ty = self.x, self.y #camera.apply(self)
-        size = self.size
-        if player:
-            tx, ty = self.x, self.y
+        tx, ty = camera.apply(self) #self.x, self.y
         
         # If Out of frame, don't draw.  Return immediately
-        if not player and ( self.x < 0 or self.y < 0 or self.x > WINDOW_WIDTH or self.y > WINDOW_HEIGHT):
+        if not player and ( tx < 0 or ty < 0 or tx > WINDOW_WIDTH or ty > WINDOW_HEIGHT):
             return
 
-        # Draw everything else
-        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), int(size))
-        self.draw_hairs(screen)
+        # Draw everything
+        pygame.draw.circle(screen, self.color, (int(tx), int(ty)), self.size)
+        self.draw_hairs(int(tx), int(ty), screen)
 
         # Draw name
         # if player:
         #     name_text = self.font.render(self.name, True, (200, 200, 200))
         #     screen.blit(name_text, (self.x + self.size, self.y))  # Display next to the blob
 
-        # if VERBOSITY > 2:
+        if VERBOSITY > 2:
             # Font rendering for displaying x, y, dx, and dy
-            # position_text = self.font.render(f" X: {int(tx)},  Y: {int(ty)}", True, (255, 255, 0))
-            # change_text = self.font.render(f"dx: {round(self.dx, 2)}, dy: {round(self.dy,2)}", True, (255, 255, 0))
-            # velocity_text = self.font.render(f"wx: {int(self.world_x)}, wy: {int(self.world_y)}", True, (255, 255, 0))
+            position_text = self.font.render(f"x: {int(self.x)}, y: {int(self.y)}", True, (255, 255, 0))
+            trans_position_text = self.font.render(f" tx: {int(tx)},  ty: {int(ty)}", True, (255, 255, 0))
+            velocity_text = self.font.render(f"dx: {round(self.dx, 2)}, dy: {round(self.dy,2)}", True, (255, 255, 0))
 
-            # Draw the text on the screen
-            # screen.blit(position_text, (self.x + self.size, self.y + 20))  # Display next to the blob
-            # screen.blit(change_text, (self.x + self.size, self.y + 20))  # Display next to the blob
-            # screen.blit(velocity_text, (self.x + self.size, self.y + 40))  # Below the position_text
+#            Draw the text on the screen
+            screen.blit(position_text, (tx + self.size, ty + 20))  # Display next to the blob
+            screen.blit(trans_position_text, (tx + self.size, ty + 40))  # Display next to the blob
+            screen.blit(velocity_text, (tx + self.size, ty + 60))  # Below the position_text
     
-    def draw_hairs(self, screen):
+    def draw_hairs(self, tx, ty, screen):
+        '''Draw hairs around a player at a certain translated position'''
         noise_scale = 1.5  # Scale of the noise, adjust for more/less variation
 
         for i in range(self.hair_count):
@@ -99,10 +97,10 @@ class Blob:
             # Adjust 0.1 and 3 for varying frequency and amplitude
             hair_length = self.hair_size + 5 * math.sin(0.3 * current_time + angle)
 
-            start_x = self.x + self.size * math.cos(angle)
-            start_y = self.y + self.size * math.sin(angle)
-            end_x = self.x + (self.size + hair_length) * math.cos(angle)
-            end_y = self.y + (self.size + hair_length) * math.sin(angle)
+            start_x = tx + self.size * math.cos(angle)
+            start_y = ty + self.size * math.sin(angle)
+            end_x = tx + (self.size + hair_length) * math.cos(angle)
+            end_y = ty + (self.size + hair_length) * math.sin(angle)
 
             pygame.draw.line(screen, self.color, (start_x, start_y), (end_x, end_y ), 1)
 
@@ -131,8 +129,8 @@ class Blob:
         # Update the blob's position
         self.x += dx * noise_scale
         self.y += dy * noise_scale
-        self.world_x += dx * noise_scale
-        self.world_y += dy * noise_scale
+#        self.world_x += dx * noise_scale
+#        self.world_y += dy * noise_scale
         
         # Increment the noise offset for the next step
         self.noise_offset_x += step_size

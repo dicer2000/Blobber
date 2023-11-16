@@ -7,6 +7,11 @@ class Camera:
         self.width = width
         self.height = height
 
+    def set_center(self, x, y):
+        start_x = x - self.bounds.width // 2
+        start_y = y - self.bounds.height // 2
+        self.bounds = pg.Rect(start_x, start_y, self.bounds.width, self.bounds.height)
+
     def apply(self, entity):
         # Return adjusted x and y positions for the blob
         x, y = entity.x - self.bounds.x, entity.y - self.bounds.y

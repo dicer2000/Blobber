@@ -8,7 +8,7 @@ Comp Sci 333 - Computer Networking
 '''
 
 # Debug settings - Verbosity 0-5
-VERBOSITY = 0
+VERBOSITY = 5
 
 # Window settings
 RES = WINDOW_WIDTH, WINDOW_HEIGHT = 1024, 800

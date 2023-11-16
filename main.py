@@ -60,6 +60,7 @@ class Game:
         self.spatial_hash = spatial_hash(COLLISION_CELL_SIZE)
         self.sounds = dict()
         self.blobs = []
+        self.current_player_index = -1
         self.main_menu = main_menu(self.screen, self.sounds, self.game_settings)
         self.font = pg.font.SysFont(None, 72)
         self.font_sm = pg.font.SysFont(None, 24)
@@ -71,9 +72,12 @@ class Game:
     def new_game(self):
         ''' Create a new game '''
         
-        # Create blobs - Main Player first (so always in index=0 position)
-        pb = PlayerBlob("main_player", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 20, (255,255,0), 0.5)
+        # Create blobs - Main Player
+        new_x, new_y = self.find_safe_spot(300)
+        pb = PlayerBlob("main_player", new_x, new_y, 20, (255,255,0), 0.5)
+        self.camera.set_center(new_x, new_y)
         self.blobs.append(pb)
+        self.current_player_index = len(self.blobs)-1
         self.spatial_hash.insert(pb)  # For the PlayerBlob
 
         # Randomly add food blobs
@@ -101,7 +105,8 @@ class Game:
 
         if self.game_settings[0]['answer'] == IS_SERVER:
             # Update the main player
-            self.blobs[0].update(self.camera)
+            if type(self.blobs[self.current_player_index]) == PlayerBlob:
+                self.blobs[self.current_player_index].update(self.camera)
 
             # Update the spacial hash since things moved
             # only after everything is done moving
@@ -109,25 +114,25 @@ class Game:
             self.spatial_hash.buckets.clear()
 
             # Update all other blobs
-            player_dx = self.blobs[0].dx
-            player_dy = self.blobs[0].dy
+            player_dx = self.blobs[self.current_player_index].dx
+            player_dy = self.blobs[self.current_player_index].dy
             for blob in self.blobs[1:]:
                 blob.wander()
                 blob.update(player_dx, player_dy)
                 self.spatial_hash.insert(blob)
 
             # Retrieve the blobs using spatial hash
-            nearby_blobs = self.spatial_hash.potential_collisions(self.blobs[0])
+            nearby_blobs = self.spatial_hash.potential_collisions(self.blobs[self.current_player_index])
 
             # Handle collisions
             if self.game_mode == GameModes.PLAYING:
                 for blob in nearby_blobs:
-                    if blob != self.blobs[0] and blob.has_touched(self.blobs[0]):
+                    if blob != self.blobs[self.current_player_index] and blob.has_touched(self.blobs[self.current_player_index]):
 
                         if(blob.name == 'food'):
                             # Add the size
-                            new_radius = (self.blobs[0].squared_size + blob.squared_size)**0.5
-                            self.blobs[0].set_size(new_radius)
+                            new_radius = (self.blobs[self.current_player_index].squared_size + blob.squared_size)**0.5
+                            self.blobs[self.current_player_index].set_size(new_radius)
 
                             # Remove the old one
                             if GAME_SOUNDS:
@@ -138,16 +143,16 @@ class Game:
                             self.blobs.append(fb)
 
                         # Else if this is a blob eating another blob...
-                        elif self.blobs[0].is_eaten == False and isinstance(blob, PlayerBlob) and isinstance(self.blobs[0], PlayerBlob):
+                        elif self.blobs[self.current_player_index].is_eaten == False and isinstance(blob, PlayerBlob) and isinstance(self.blobs[self.current_player_index], PlayerBlob):
                             # Determine which blob is bigger, hence the eater
-                            if blob.size > self.blobs[0].size:
+                            if blob.size > self.blobs[self.current_player_index].size:
                                 # You got eaten!
                                 self.is_eaten = True
                                 eater_blob = blob
-                                eaten_player = self.blobs[0]
+                                eaten_player = self.blobs[self.current_player_index]
                             else: # You are the eater!
                                 
-                                eater_blob = self.blobs[0]
+                                eater_blob = self.blobs[self.current_player_index]
                                 eaten_player = blob
 
                     # Check if only one PlayerBlob remains that is not eaten
@@ -168,7 +173,7 @@ class Game:
         self.world.draw(self.screen, self.camera)
         
         # Draw all the blobs
-        for blob in self.blobs[::-1]:
+        for blob in self.blobs:  # TO DO: Make sure they are within the screen
             blob.draw(self.screen, self.camera)
             if blob.name != 'food': # Show the player name
                 name_text = self.font_sm.render(blob.name, True, (200, 200, 200))
@@ -183,16 +188,37 @@ class Game:
         # Drawn screen to forefront
         pg.display.flip()
 
+    def find_safe_spot(self, safe_distance=500):
+        """
+        Find a spot on the screen to place a new user 
+        that is not within 'safe_distance' pixels of other users.
+        """
+        while True:
+            # Randomly select a position within the world bounds
+            x = random.randint(50, WORLD_WIDTH-100)
+            y = random.randint(50, WORLD_HEIGHT-100)
+
+            # Check if any blob is within the safe distance
+            too_close = any(
+                hypot(blob.x - x, blob.y - y) < safe_distance
+                for blob in self.blobs
+            )
+
+            # If a safe spot is found, return the coordinates
+            if not too_close:
+                return x, y
 
     def move_towards(self, blob, target_x, target_y):
         """Set blob's movement vectors to move it towards a target point."""
 
         # Calculate direction vector components
-        dir_x = target_x - blob.x
-        dir_y = target_y - blob.y
+        player_x = WINDOW_WIDTH // 2
+        player_y = WINDOW_HEIGHT // 2
+        dir_x = target_x - player_x
+        dir_y = target_y - player_y
 
         # Calculate direction vector
-        distance = hypot(target_x - blob.x, target_y - blob.y)
+        distance = hypot(target_x - player_x, target_y - player_y)
         # Avoid division by zero (when blob is already at the target position)
         if distance == 0:
             blob.dx = 0.0
@@ -222,8 +248,8 @@ class Game:
             # Check if the mouse has moved
             elif self.game_mode == GameModes.PLAYING and event.type == pg.MOUSEMOTION:
                 mouseX, mouseY = event.pos
-                if len(self.blobs) > 0:
-                    self.move_towards(self.blobs[0], mouseX, mouseY)
+                if len(self.blobs) > 0 and self.current_player_index > -1:
+                    self.move_towards(self.blobs[self.current_player_index], mouseX, mouseY)
 
     def run(self):
         frame_id = 0
@@ -237,15 +263,15 @@ class Game:
                 self.game_settings = self.main_menu.show()
                 # Set all settings from main menu:
                 # name
-                temp = self.game_settings[2]['answer']
-                self.blobs[0].set_name(temp)
-                # color
-                temp = BLOB_COLOR_ARRAY[self.game_settings[1]['answer']]
-                self.blobs[0].set_color(temp)
-                # hair
-                temp = self.game_settings[3]['answer']
-                self.blobs[0].set_hair_count(temp * 14)
-                self.blobs[0].set_hair_size(temp * 2 + 10)
+                # temp = self.game_settings[2]['answer']
+                # self.blobs[0].set_name(temp)
+                # # color
+                # temp = BLOB_COLOR_ARRAY[self.game_settings[1]['answer']]
+                # self.blobs[0].set_color(temp)
+                # # hair
+                # temp = self.game_settings[3]['answer']
+                # self.blobs[0].set_hair_count(temp * 14)
+                # self.blobs[0].set_hair_size(temp * 2 + 10)
                 self.game_mode = GameModes.PAUSED
             else:
                 if frame_id % 2 == 0: #Experimental
