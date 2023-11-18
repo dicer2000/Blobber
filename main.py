@@ -67,14 +67,17 @@ class Game:
         self.is_eaten = False
         self.eater = None
         self.load_sounds()
-        self.new_game()
+        
 
-    def new_game(self):
+    def new_server_game(self):
         ''' Create a new game '''
         
         # Create blobs - Main Player
         new_x, new_y = self.find_safe_spot(300)
-        pb = PlayerBlob("main_player", new_x, new_y, 20, (255,255,0), 0.5)
+        name = self.game_settings[2]['answer']
+        color = BLOB_COLOR_ARRAY[self.game_settings[1]['answer']]
+        hair = self.game_settings[3]['answer']
+        pb = PlayerBlob(name, new_x, new_y, 20, color, speed=4, hair_length=hair*2+10, hair_count=hair*14)
         self.camera.set_center(new_x, new_y)
         self.blobs.append(pb)
         self.current_player_index = len(self.blobs)-1
@@ -86,7 +89,10 @@ class Game:
             self.blobs.append(fb)
             self.spatial_hash.insert(fb)  # For each food blob
 
+
+
     def load_sounds(self):
+        '''Load all the sounds from the sounds dictionary'''
         pg.mixer.init() # initialize sound
 
         for snd in SOUNDS:
@@ -241,6 +247,7 @@ class Game:
                 self.game_mode = GameModes.MAIN_MENU
             # If Server Mode allow to switch between Paused and Playing
             elif self.game_settings[0]['answer'] == IS_SERVER and event.type == pg.KEYDOWN and event.key == pg.K_p:
+                # Can't pause once it's going right now
                 if self.game_mode == GameModes.PLAYING:
                     self.game_mode = GameModes.PAUSED
                 elif self.game_mode == GameModes.PAUSED:
@@ -260,18 +267,18 @@ class Game:
 
             # If no Game Mode, show main menu
             if self.game_mode == GameModes.MAIN_MENU:
+                # Get settings for new game
                 self.game_settings = self.main_menu.show()
-                # Set all settings from main menu:
-                # name
-                # temp = self.game_settings[2]['answer']
-                # self.blobs[0].set_name(temp)
-                # # color
-                # temp = BLOB_COLOR_ARRAY[self.game_settings[1]['answer']]
-                # self.blobs[0].set_color(temp)
-                # # hair
-                # temp = self.game_settings[3]['answer']
-                # self.blobs[0].set_hair_count(temp * 14)
-                # self.blobs[0].set_hair_size(temp * 2 + 10)
+
+                # Setup the new game and listen for users
+                if self.game_settings[0]['answer'] == IS_SERVER:
+                    self.new_server_game()
+
+#                else:
+                    # Connect to server
+
+
+
                 self.game_mode = GameModes.PAUSED
             else:
                 if frame_id % 2 == 0: #Experimental

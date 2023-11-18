@@ -22,7 +22,7 @@ IS_CLIENT = 0
 IS_SERVER = 1
 
 # Blob Settings
-MAX_BLOB_VELOCITY = 2.0
+MAX_BLOB_VELOCITY = 5.0
 START_BLOB = [
     {'question': 'Client/Server', 'options': ['Client', 'Server'], 'answer': IS_CLIENT},
     {'question': 'Color', 'options': ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple'], 'answer': 0},
