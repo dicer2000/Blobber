@@ -20,6 +20,7 @@ COLLISION_CELL_SIZE = 50
 COLLISION_BOUNDING_BOX_SIZE = 250 # 250 pixels around the center player are checked
 IS_CLIENT = 0
 IS_SERVER = 1
+SERVER_LISTEN_PORT = 12345
 
 # Blob Settings
 MAX_BLOB_VELOCITY = 5.0

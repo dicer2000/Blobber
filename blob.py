@@ -14,8 +14,6 @@ class Blob:
 
         # World coordinates removed as everything is world
         # the camera class converts them to camera-ready
-#        self.world_x = x # X coordinate in world space
-#        self.world_y = y # Y coordinate in world space
         self.x = x # Camera-relative X coordinate
         self.y = y # Camera-relative Y coordinate
 
@@ -30,7 +28,7 @@ class Blob:
         self.noise_offset_x = random.random() * 1000  # Random starting point for noise
         self.noise_offset_y = random.random() * 1000
         self.simplex_noise = OpenSimplex(seed=int(time.time()))
-        self.font = pygame.font.SysFont(None, 24)
+        # self.font = pygame.font.SysFont(None, 24)
 
     # Set a new size and also it's square
     def set_size(self, new_size):
@@ -68,21 +66,17 @@ class Blob:
         pygame.draw.circle(screen, self.color, (int(tx), int(ty)), self.size)
         self.draw_hairs(int(tx), int(ty), screen)
 
-        # Draw name
-        # if player:
-        #     name_text = self.font.render(self.name, True, (200, 200, 200))
-        #     screen.blit(name_text, (self.x + self.size, self.y))  # Display next to the blob
+        # Commented out because fonts don't work with pickle
+#         if VERBOSITY > 2:
+#             # Font rendering for displaying x, y, dx, and dy
+#             position_text = self.font.render(f"x: {int(self.x)}, y: {int(self.y)}", True, (255, 255, 0))
+#             trans_position_text = self.font.render(f" tx: {int(tx)},  ty: {int(ty)}", True, (255, 255, 0))
+#             velocity_text = self.font.render(f"dx: {round(self.dx, 2)}, dy: {round(self.dy,2)}", True, (255, 255, 0))
 
-        if VERBOSITY > 2:
-            # Font rendering for displaying x, y, dx, and dy
-            position_text = self.font.render(f"x: {int(self.x)}, y: {int(self.y)}", True, (255, 255, 0))
-            trans_position_text = self.font.render(f" tx: {int(tx)},  ty: {int(ty)}", True, (255, 255, 0))
-            velocity_text = self.font.render(f"dx: {round(self.dx, 2)}, dy: {round(self.dy,2)}", True, (255, 255, 0))
-
-#            Draw the text on the screen
-            screen.blit(position_text, (tx + self.size, ty + 20))  # Display next to the blob
-            screen.blit(trans_position_text, (tx + self.size, ty + 40))  # Display next to the blob
-            screen.blit(velocity_text, (tx + self.size, ty + 60))  # Below the position_text
+# #            Draw the text on the screen
+#             screen.blit(position_text, (tx + self.size, ty + 20))  # Display next to the blob
+#             screen.blit(trans_position_text, (tx + self.size, ty + 40))  # Display next to the blob
+#             screen.blit(velocity_text, (tx + self.size, ty + 60))  # Below the position_text
     
     def draw_hairs(self, tx, ty, screen):
         '''Draw hairs around a player at a certain translated position'''

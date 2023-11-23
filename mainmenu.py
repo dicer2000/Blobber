@@ -12,6 +12,7 @@ import random
 from settings import *
 from common import clamp, get_private_ip
 from tweener import Tween, Easing, EasingMode
+from socket import getaddrinfo, AF_INET, SOCK_STREAM, SOCK_DGRAM, socket
 
 class main_menu:
     def __init__(self, screen, sounds, start_settings):
@@ -30,11 +31,16 @@ class main_menu:
                                      reps=0)  # Infinite Reps
         self.breathing_image = pg.image.load('images/blobbie.png')
  
-        self.questions = start_settings # Ask these questions
         self.current_question_idx = 0
+
+        # Get the IP Address to show
+        start_settings[4]['answer'] = self.get_local_ips()
+        self.questions = start_settings # Ask these questions
+
 
     def show(self):
         title_font = pg.font.SysFont("Comic Sans", 80)
+        info_font = pg.font.SysFont("Comic Sans", 30)
         delta_time = 0
         clock = pg.time.Clock()
         self.breathing_tween.start()
@@ -83,6 +89,15 @@ class main_menu:
             title_text = title_font.render('Blobber', True, (216, 191, 216))
             self.screen.blit(title_text, [600, 20])
             
+            # Show server mode or client mode
+            if self.questions[0]['answer'] == IS_SERVER:
+                sys_text = info_font.render('Server Mode', True, (216, 191, 216))
+                self.screen.blit(sys_text, [40, WINDOW_HEIGHT-80])
+            elif self.questions[0]['answer'] == IS_CLIENT:
+                sys_text = info_font.render('Client Mode', True, (216, 191, 216))
+                self.screen.blit(sys_text, [40, WINDOW_HEIGHT-80])
+
+
             # We are done getting info, hook us up to the game
             if self.current_question_idx > len(self.questions)-1:
                 if BACKGROUND_MUSIC:
@@ -121,3 +136,15 @@ class main_menu:
         # Draw the selected option
         selected_surface = self.input_font.render(options[selected_idx], True, (255, 255, 255))
         self.screen.blit(selected_surface, (x + 10, y + 5))
+
+    def get_local_ips(self):
+        try:
+            # Create a temporary socket to determine the local IP address
+            # The destination doesn't need to be reachable
+            with socket(AF_INET, SOCK_DGRAM) as s:
+                # Using Google's public DNS server address and port
+                s.connect(("8.8.8.8", 80))
+                IP = s.getsockname()[0]
+        except Exception:
+            IP = "127.0.0.1"
+        return IP

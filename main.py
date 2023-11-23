@@ -28,6 +28,8 @@ from world import world
 from spatial_hash import spatial_hash
 from pygame.locals import *
 from mainmenu import main_menu
+from twisted_net import BlobberServerFactory, BlobberServerProtocol
+from twisted.internet import reactor
 
 import pickle
 
@@ -63,6 +65,7 @@ class Game:
         self.current_player_index = -1
         self.main_menu = main_menu(self.screen, self.sounds, self.game_settings)
         self.font = pg.font.SysFont(None, 72)
+        self.font_med = pg.font.SysFont(None, 42)
         self.font_sm = pg.font.SysFont(None, 24)
         self.is_eaten = False
         self.eater = None
@@ -183,13 +186,18 @@ class Game:
             blob.draw(self.screen, self.camera)
             if blob.name != 'food': # Show the player name
                 name_text = self.font_sm.render(blob.name, True, (200, 200, 200))
-                self.screen.blit(name_text, (blob.x + blob.size, blob.y))
+                x_act, y_act = self.camera.apply(blob)
+                self.screen.blit(name_text, (x_act + blob.size, y_act))
         
         # Draw Paused if screen paused
         if self.game_mode == GameModes.PAUSED:
             name_text = self.font.render("P A U S E D", True, (240, 240, 240))
             text_rect = name_text.get_rect(center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2-100))
             self.screen.blit(name_text, text_rect)
+
+        if self.game_settings[0]['answer'] == IS_SERVER:
+                sys_text = self.font_med.render('IP: ' + self.game_settings[4]['answer'], True, (216, 191, 216))
+                self.screen.blit(sys_text, [40, WINDOW_HEIGHT-60])
 
         # Drawn screen to forefront
         pg.display.flip()
@@ -235,6 +243,12 @@ class Game:
         blob.dx = clamp(dir_x * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
         blob.dy = clamp(dir_y * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
 
+    # Connecting to Twisted
+    def start_twisted_server(self):
+        # Start the Twisted server
+        factory = BlobberServerFactory(self)
+        reactor.listenTCP(SERVER_LISTEN_PORT, factory)
+        
 
     def check_events(self):
         # Check for keyboard events
@@ -273,7 +287,7 @@ class Game:
                 # Setup the new game and listen for users
                 if self.game_settings[0]['answer'] == IS_SERVER:
                     self.new_server_game()
-
+                    self.start_twisted_server()
 #                else:
                     # Connect to server
 
@@ -285,6 +299,9 @@ class Game:
                     self.update()
                 self.draw()
                     
+                # Process Twisted events
+                reactor.iterate()
+
                 self.delta_time = self.clock.tick(FPS)
                 frame_id += 1
 
