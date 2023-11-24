@@ -17,6 +17,7 @@ environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import pygame as pg
 import sys
 import random
+import time
 from settings import *
 from blob import Blob
 from playerblob import PlayerBlob
@@ -92,26 +93,16 @@ class Game:
             self.blobs.append(fb)
             self.spatial_hash.insert(fb)  # For each food blob
 
-
-
-    def load_sounds(self):
-        '''Load all the sounds from the sounds dictionary'''
-        pg.mixer.init() # initialize sound
-
-        for snd in SOUNDS:
-            name = snd.split('.')[0]
-            value = pg.mixer.Sound('./sounds/' + snd)
-            if name is not None and value is not None:
-                self.sounds.update({name: value})
-
-
     def update(self):
         ''' Update executed once per frame '''
         # Caption for now        
         pg.display.set_caption(f'{self.clock.get_fps():.1f} fps')
 
 
-
+        # ********************************************
+        # Server - Only processing
+        # Once per update
+        # ********************************************
         if self.game_settings[0]['answer'] == IS_SERVER:
             # Update the main player
             if type(self.blobs[self.current_player_index]) == PlayerBlob:
@@ -172,6 +163,10 @@ class Game:
             # Prepare everything to send to clients
 #            serialized_data = pickle.dumps(self.blobs)
         else:
+        # ********************************************
+        # Client - Only processing
+        # Once per update
+        # ********************************************
             pass
         
     def draw(self):
@@ -195,60 +190,13 @@ class Game:
             text_rect = name_text.get_rect(center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2-100))
             self.screen.blit(name_text, text_rect)
 
+        # Show IP if Server Only
         if self.game_settings[0]['answer'] == IS_SERVER:
                 sys_text = self.font_med.render('IP: ' + self.game_settings[4]['answer'], True, (216, 191, 216))
                 self.screen.blit(sys_text, [40, WINDOW_HEIGHT-60])
 
         # Drawn screen to forefront
         pg.display.flip()
-
-    def find_safe_spot(self, safe_distance=500):
-        """
-        Find a spot on the screen to place a new user 
-        that is not within 'safe_distance' pixels of other users.
-        """
-        while True:
-            # Randomly select a position within the world bounds
-            x = random.randint(50, WORLD_WIDTH-100)
-            y = random.randint(50, WORLD_HEIGHT-100)
-
-            # Check if any blob is within the safe distance
-            too_close = any(
-                hypot(blob.x - x, blob.y - y) < safe_distance
-                for blob in self.blobs
-            )
-
-            # If a safe spot is found, return the coordinates
-            if not too_close:
-                return x, y
-
-    def move_towards(self, blob, target_x, target_y):
-        """Set blob's movement vectors to move it towards a target point."""
-
-        # Calculate direction vector components
-        player_x = WINDOW_WIDTH // 2
-        player_y = WINDOW_HEIGHT // 2
-        dir_x = target_x - player_x
-        dir_y = target_y - player_y
-
-        # Calculate direction vector
-        distance = hypot(target_x - player_x, target_y - player_y)
-        # Avoid division by zero (when blob is already at the target position)
-        if distance == 0:
-            blob.dx = 0.0
-            blob.dy = 0.0
-            return
-        
-        # Scale the direction by the blob's speed to get the movement vector
-        blob.dx = clamp(dir_x * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
-        blob.dy = clamp(dir_y * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
-
-    # Connecting to Twisted
-    def start_twisted_server(self):
-        # Start the Twisted server
-        factory = BlobberServerFactory(self)
-        reactor.listenTCP(SERVER_LISTEN_PORT, factory)
-        
 
     def check_events(self):
         # Check for keyboard events
@@ -305,6 +253,84 @@ class Game:
                 self.delta_time = self.clock.tick(FPS)
                 frame_id += 1
 
+    # *****************************
+    # Helper methods for Game class
+    # *****************************
+
+    def load_splash_screen(self):
+        '''Load the splash screen (not used currently)'''
+        if SPLASH_IMAGE:
+            splash_image = pg.image.load(SPLASH_IMAGE)
+            splash_image = pg.transform.scale(splash_image, RES)
+
+            # Display the splash screen
+            self.screen.blit(splash_image, (0, 0))
+            pg.display.flip()
+            time.sleep(2)
+
+    def find_safe_spot(self, safe_distance=500):
+        """
+        Find a spot on the screen to place a new user 
+        that is not within 'safe_distance' pixels of other users.
+        """
+        while True:
+            # Randomly select a position within the world bounds
+            x = random.randint(50, WORLD_WIDTH-100)
+            y = random.randint(50, WORLD_HEIGHT-100)
+
+            # Check if any blob is within the safe distance
+            too_close = any(
+                hypot(blob.x - x, blob.y - y) < safe_distance
+                for blob in self.blobs
+            )
+
+            # If a safe spot is found, return the coordinates
+            if not too_close:
+                return x, y
+
+    def move_towards(self, blob, target_x, target_y):
+        """Set blob's movement vectors to move it towards a target point."""
+
+        # Calculate direction vector components
+        player_x = WINDOW_WIDTH // 2
+        player_y = WINDOW_HEIGHT // 2
+        dir_x = target_x - player_x
+        dir_y = target_y - player_y
+
+        # Calculate direction vector
+        distance = hypot(target_x - player_x, target_y - player_y)
+        # Avoid division by zero (when blob is already at the target position)
+        if distance == 0:
+            blob.dx = 0.0
+            blob.dy = 0.0
+            return
+        
+        # Scale the direction by the blob's speed to get the movement vector
+        blob.dx = clamp(dir_x * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
+        blob.dy = clamp(dir_y * distance / 9000, -MAX_BLOB_VELOCITY, MAX_BLOB_VELOCITY)
+        
+    def load_sounds(self):
+        '''Load all the sounds from the sounds dictionary'''
+        pg.mixer.init() # initialize sound
+
+        for snd in SOUNDS:
+            name = snd.split('.')[0]
+            value = pg.mixer.Sound('./sounds/' + snd)
+            if name is not None and value is not None:
+                self.sounds.update({name: value})
+
+    # *****************************
+    # Networking Methods
+    # *****************************
+
+    # Connecting to Twisted
+    def start_twisted_server(self):
+        '''Start the Twisted Server'''
+        factory = BlobberServerFactory(self)
+        reactor.listenTCP(SERVER_LISTEN_PORT, factory)
+
+# *****************************
+# Start Up
 def main():
     game = Game()
     game.run()
