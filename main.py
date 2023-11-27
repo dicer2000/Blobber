@@ -134,13 +134,14 @@ class Game:
                             new_radius = (self.blobs[self.current_player_index].squared_size + blob.squared_size)**0.5
                             self.blobs[self.current_player_index].set_size(new_radius)
 
-                            # Remove the old one
+                            # Play an eating sound
                             if GAME_SOUNDS:
                                 self.sounds['collision'].play()
-                            self.blobs.remove(blob)
+                            # Re-generate the blob somewhere else
+#                            self.blobs.remove(blob)
                             # Make a new food blob
-                            fb = Blob("food", random.randrange(0, WORLD_WIDTH), random.randrange(0, WORLD_HEIGHT), 10, FOOD_COLOR_ARRAY[random.randint(0, len(FOOD_COLOR_ARRAY) - 1)], 0, 1)
-                            self.blobs.append(fb)
+                            blob.x = random.randrange(0, WORLD_WIDTH)
+                            blob.y = random.randrange(0, WORLD_HEIGHT)
 
                         # Else if this is a blob eating another blob...
                         elif self.blobs[self.current_player_index].is_eaten == False and isinstance(blob, PlayerBlob) and isinstance(self.blobs[self.current_player_index], PlayerBlob):
