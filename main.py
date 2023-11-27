@@ -62,7 +62,6 @@ class Game:
         self.camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.spatial_hash = spatial_hash(COLLISION_CELL_SIZE)
         self.sounds = dict()
-        self.blobs = []
         self.current_player_index = -1
         self.main_menu = main_menu(self.screen, self.sounds, self.game_settings)
         self.font = pg.font.SysFont(None, 72)
