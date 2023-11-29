@@ -14,19 +14,13 @@ class BlobberServerProtocol(protocol.Protocol):
         self.factory.addClient(self.clientID, self)
 
         if VERBOSITY > 2:
-            print(f"Connection from {self.transport.getPeer()} with ID {self.clientID}")
-
-    def connectionLost(self, reason):
-        ''' Called when the client connection is lost. Removes the client from the factory's list. '''
-        self.factory.removeClient(self.clientID)
+            print(f"Connection from {self.transport.getPeer()}")
+        self.factory.game.add_player(self)
 
     def dataReceived(self, data):
         ''' Called when data is received from a client. Logs the received data and handles player actions. '''
         if VERBOSITY > 2:
-            print(f"Received from {self.clientID}: {data}")
-        # The data is expected to be a pickled dictionary
-        # Send it to Main to process
-        self.factory.game.TCPDataReceivedFromClient(self.clientID, data)
+            print(f"Received: {data}")
 
 class BlobberServerFactory(protocol.Factory):
     ''' Factory for creating BlobberServerProtocol instances. '''
