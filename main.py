@@ -29,7 +29,7 @@ from world import world
 from spatial_hash import spatial_hash
 from pygame.locals import *
 from mainmenu import main_menu
-from twisted_net import BlobberServerFactory, BlobberServerProtocol
+from twisted_net import BlobberServerFactory, BlobberServerProtocol, BlobberClientFactory, BlobberClientProtocol, BlobberUDPServer, BlobberUDPClient
 from twisted.internet import reactor
 
 import pickle
@@ -236,10 +236,11 @@ class Game:
                 if self.game_settings[0]['answer'] == IS_SERVER:
                     self.new_server_game()
                     self.start_twisted_server()
-#                else:
-                    # Connect to server
-
-
+                else:
+                    # I'm a client, Connect to server
+                    # Create the factory instance
+                    # with the entered server address                   
+                    self.start_twisted_client(self.game_settings[4]['answer'])
 
                 self.game_mode = GameModes.PAUSED
             else:
@@ -326,8 +327,59 @@ class Game:
     # Connecting to Twisted
     def start_twisted_server(self):
         '''Start the Twisted Server'''
-        factory = BlobberServerFactory(self)
-        reactor.listenTCP(SERVER_LISTEN_PORT, factory)
+        self.factory = BlobberServerFactory(self)
+        reactor.listenTCP(SERVER_LISTEN_PORT, self.factory)
+
+    def start_twisted_client(self, address):
+        self.factory = BlobberClientFactory(self)
+        reactor.connectTCP(address, SERVER_LISTEN_PORT, self.factory)
+
+    def start_twisted_client_setup_user(self):
+        # Pickle the player's config data and send to the server
+        serialized_data = pickle.dumps({'player_join': self.game_settings})
+        self.factory.sendData(serialized_data)
+
+    def TCPDataReceivedFromClient(self, data):
+        '''Receive data from the client via TCP.
+        Data must be a pickled dictionary'''
+        try:
+            received_data = pickle.loads(data)
+
+            # Should be a dictionary
+            if not isinstance(received_data, dict):
+                raise ValueError("Unpickled data is not a list")
+            
+            # Use the data
+            for key, value in received_data.items():
+                if key == 'player_join':
+                    self.add_player(value)
+#                elif key == 'typeB':
+#                    self.handleTypeB(value)
+#                else:
+#                    self.defaultHandler(value)
+
+        except pickle.UnpicklingError:
+            print("Error in unpickling data")
+                
+        except ValueError as e:
+            print(f"Error Data Not a Dictionary: {e}")
+
+
+
+    def add_player(self, new_player_settings):
+        '''Take a player START_BLOB and make a new player'''
+        new_x, new_y = self.find_safe_spot(300)
+        color = BLOB_COLOR_ARRAY[new_player_settings[1]['answer']]
+        name = new_player_settings[2]['answer']
+        hair = new_player_settings[3]['answer']
+        # Now add this new client to the game
+        pb = Blob(name, new_x, new_y, 20, color, speed=4, hair_length=hair*2+10, hair_count=hair*14)
+        self.blobs.append(pb)
+        new_player_index = len(self.blobs)-1
+        self.spatial_hash.insert(pb)  # For the PlayerBlob
+        # Now send the new player index back to the client
+        serialized_data = pickle.dumps({'player_id': new_player_index})
+        self.factory.sendMessageToClient(clientID, serialized_data)
 
 # *****************************
 # Start Up
